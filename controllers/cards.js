@@ -3,7 +3,7 @@ const Card = require('../models/card');
 module.exports.getCards = (req, res) => {
   Card.find({})
     .then((cards) => res.send(cards))
-    .catch((err) => res.status(404)
+    .catch((err) => res.status(500)
       .send({ message: err.message }));
 };
 
@@ -13,6 +13,11 @@ module.exports.createCard = (req, res) => {
     name,
     link
   } = req.body;
+  if (!name || !link || !owner) {
+    res.status(400)
+      .send({ message: 'invalid data' });
+    return;
+  }
   Card.create({
     name,
     link,
@@ -41,20 +46,50 @@ module.exports.deleteCard = (req, res) => {
       .send({ message: err.message }));
 };
 
-module.exports.likeCard = (req, res) => Card.findByIdAndUpdate(
-  req.params.cardId,
-  { $addToSet: { likes: req.user._id } },
-  { new: true }
-)
-  .then((card) => res.send(card))
-  .catch((err) => res.status(500)
-    .send({ message: err.message }));
+module.exports.likeCard = (req, res) => {
+  const { cardId } = req.params;
+  const { userId } = req.user;
 
-module.exports.dislikeCard = (req, res) => Card.findByIdAndUpdate(
-  req.params.cardId,
-  { $pull: { likes: req.user._id } },
-  { new: true }
-)
-  .then((card) => res.send(card))
-  .catch((err) => res.status(500)
-    .send({ message: err.message }));
+  if (!userId) {
+    res.status(400)
+      .send({ message: 'invalid data' });
+    return;
+  }
+  if (!cardId) {
+    res.status(404)
+      .send({ message: 'invalid data' });
+    return;
+  }
+  Card.findByIdAndUpdate(
+    cardId,
+    { $addToSet: { likes: userId } },
+    { new: true }
+  )
+    .then((card) => res.send(card))
+    .catch((err) => res.status(500)
+      .send({ message: err.message }));
+};
+
+module.exports.dislikeCard = (req, res) => {
+  const { cardId } = req.params;
+  const { userId } = req.user;
+
+  if (!userId) {
+    res.status(400)
+      .send({ message: 'invalid data' });
+    return;
+  }
+  if (!cardId) {
+    res.status(404)
+      .send({ message: 'invalid data' });
+    return;
+  }
+  Card.findByIdAndUpdate(
+    cardId,
+    { $pull: { likes: userId } },
+    { new: true }
+  )
+    .then((card) => res.send(card))
+    .catch((err) => res.status(500)
+      .send({ message: err.message }));
+};
