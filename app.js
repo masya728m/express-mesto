@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const StatusCodes = require('./utils/statusCodes');
 
 const {
   PORT = 3000,
@@ -19,6 +20,11 @@ app.use((req, res, next) => {
 });
 app.use('/cards', require('./routes/cards'));
 app.use('/users', require('./routes/users'));
+
+app.use((req, res) => {
+  res.status(StatusCodes.NOT_FOUND)
+    .send({ message: 'not found' });
+});
 
 const options = {
   useNewUrlParser: true,

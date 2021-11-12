@@ -4,16 +4,27 @@ const StatusCodes = require('../utils/statusCodes');
 module.exports.getUsers = (req, res) => {
   User.find({})
     .then((users) => res.send(users))
-    .catch((err) => res.status(StatusCodes.INVALID_DATA)
+    .catch((err) => res.status(StatusCodes.SERVER_ERROR)
       .send({ message: err.message }));
 };
 
 module.exports.getUser = (req, res) => {
   const { id } = req.params;
   User.findById(id)
+    .orFail(() => {
+      const error = new Error('Can not find user with required id');
+      error.statusCode = 404;
+      throw error;
+    })
     .then((user) => res.send(user))
-    .catch((err) => res.status(err.name === 'CastError' ? StatusCodes.NOT_FOUND : StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        res.status(StatusCodes.INVALID_DATA)
+          .send({ message: 'invalid data' });
+      }
+      res.status(StatusCodes.SERVER_ERROR)
+        .send({ message: err.message });
+    });
 };
 
 module.exports.createUser = (req, res) => {
@@ -28,8 +39,14 @@ module.exports.createUser = (req, res) => {
     avatar
   })
     .then((user) => res.send(user))
-    .catch((err) => res.status(StatusCodes.INVALID_DATA)
-      .send({ message: err.message }));
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        res.status(StatusCodes.INVALID_DATA)
+          .send({ message: 'invalid data' });
+      }
+      res.status(StatusCodes.SERVER_ERROR)
+        .send({ message: err.message });
+    });
 };
 
 module.exports.updateUserProfile = (req, res) => {
@@ -45,10 +62,19 @@ module.exports.updateUserProfile = (req, res) => {
   User.findByIdAndUpdate(req.user._id, {
     name,
     about
-  }, { new: true })
+  }, {
+    new: true,
+    runValidators: true
+  })
     .then((user) => res.send(user))
-    .catch((err) => res.status(err.name === 'CastError' ? StatusCodes.NOT_FOUND : StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        res.status(StatusCodes.INVALID_DATA)
+          .send({ message: 'invalid data' });
+      }
+      res.status(StatusCodes.SERVER_ERROR)
+        .send({ message: err.message });
+    });
 };
 
 module.exports.updateUserAvatar = (req, res) => {
@@ -59,7 +85,18 @@ module.exports.updateUserAvatar = (req, res) => {
     return;
   }
   User.findByIdAndUpdate(req.user._id, { avatar }, { new: true })
+    .orFail(() => {
+      const error = new Error('Can not find user with required id');
+      error.statusCode = 404;
+      throw error;
+    })
     .then((user) => res.send(user))
-    .catch((err) => res.status(err.name === 'CastError' ? StatusCodes.NOT_FOUND : StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        res.status(StatusCodes.INVALID_DATA)
+          .send({ message: 'invalid data' });
+      }
+      res.status(StatusCodes.SERVER_ERROR)
+        .send({ message: err.message });
+    });
 };

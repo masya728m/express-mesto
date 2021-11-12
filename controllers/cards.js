@@ -4,8 +4,15 @@ const StatusCodes = require('../utils/statusCodes');
 module.exports.getCards = (req, res) => {
   Card.find({})
     .then((cards) => res.send(cards))
-    .catch((err) => res.status(StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        res.status(StatusCodes.INVALID_DATA)
+          .send({ message: 'Invalid data' });
+        return;
+      }
+      res.status(StatusCodes.SERVER_ERROR)
+        .send({ message: err.message });
+    });
 };
 
 module.exports.createCard = (req, res) => {
@@ -51,13 +58,8 @@ module.exports.likeCard = (req, res) => {
   const { cardId } = req.params;
   const { userId } = req.user;
 
-  if (!userId) {
+  if (!userId || !cardId) {
     res.status(StatusCodes.INVALID_DATA)
-      .send({ message: 'invalid data' });
-    return;
-  }
-  if (!cardId) {
-    res.status(StatusCodes.NOT_FOUND)
       .send({ message: 'invalid data' });
     return;
   }
@@ -66,6 +68,11 @@ module.exports.likeCard = (req, res) => {
     { $addToSet: { likes: userId } },
     { new: true }
   )
+    .orFail(() => {
+      const error = new Error('Can not find card with required id');
+      error.statusCode = 404;
+      throw error;
+    })
     .then((card) => res.send(card))
     .catch((err) => res.status(StatusCodes.SERVER_ERROR)
       .send({ message: err.message }));
@@ -90,6 +97,11 @@ module.exports.dislikeCard = (req, res) => {
     { $pull: { likes: userId } },
     { new: true }
   )
+    .orFail(() => {
+      const error = new Error('Can not find card with required id');
+      error.statusCode = 404;
+      throw error;
+    })
     .then((card) => res.send(card))
     .catch((err) => res.status(StatusCodes.SERVER_ERROR)
       .send({ message: err.message }));
