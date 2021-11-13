@@ -18,9 +18,13 @@ module.exports.getUser = (req, res) => {
     })
     .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
+      if (err.name === 'CastError') {
         res.status(StatusCodes.INVALID_DATA)
           .send({ message: 'invalid data' });
+      }
+      if (err.statusCode === 404) {
+        res.status(404)
+          .send({ message: err.message });
       }
       res.status(StatusCodes.SERVER_ERROR)
         .send({ message: err.message });
@@ -95,6 +99,10 @@ module.exports.updateUserAvatar = (req, res) => {
       if (err.name === 'ValidationError') {
         res.status(StatusCodes.INVALID_DATA)
           .send({ message: 'invalid data' });
+      }
+      if (err.statusCode === 404) {
+        res.status(404)
+          .send({ message: err.message });
       }
       res.status(StatusCodes.SERVER_ERROR)
         .send({ message: err.message });

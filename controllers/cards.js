@@ -4,15 +4,8 @@ const StatusCodes = require('../utils/statusCodes');
 module.exports.getCards = (req, res) => {
   Card.find({})
     .then((cards) => res.send(cards))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(StatusCodes.INVALID_DATA)
-          .send({ message: 'Invalid data' });
-        return;
-      }
-      res.status(StatusCodes.SERVER_ERROR)
-        .send({ message: err.message });
-    });
+    .catch((err) => res.status(StatusCodes.SERVER_ERROR)
+      .send({ message: err.message }));
 };
 
 module.exports.createCard = (req, res) => {
@@ -32,8 +25,14 @@ module.exports.createCard = (req, res) => {
     owner
   })
     .then((card) => res.send(card))
-    .catch((err) => res.status(StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        res.status(StatusCodes.INVALID_DATA)
+          .send({ message: 'invalid data' });
+      }
+      res.status(StatusCodes.SERVER_ERROR)
+        .send({ message: err.message });
+    });
 };
 
 module.exports.deleteCard = (req, res) => {
@@ -48,7 +47,8 @@ module.exports.deleteCard = (req, res) => {
         res.status(StatusCodes.NOT_FOUND)
           .send({ message: 'no such card' });
       }
-      res.send();
+      res.status(2000)
+        .send({ message: 'Card has been successfully deleted' });
     })
     .catch((err) => res.status(StatusCodes.SERVER_ERROR)
       .send({ message: err.message }));
@@ -74,8 +74,14 @@ module.exports.likeCard = (req, res) => {
       throw error;
     })
     .then((card) => res.send(card))
-    .catch((err) => res.status(StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch((err) => {
+      if (err.statusCode === 404) {
+        res.status(404)
+          .send({ message: err.message });
+      }
+      res.status(StatusCodes.SERVER_ERROR)
+        .send({ message: err.message });
+    });
 };
 
 module.exports.dislikeCard = (req, res) => {
@@ -103,6 +109,12 @@ module.exports.dislikeCard = (req, res) => {
       throw error;
     })
     .then((card) => res.send(card))
-    .catch((err) => res.status(StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch((err) => {
+      if (err.statusCode === 404) {
+        res.status(404)
+          .send({ message: err.message });
+      }
+      res.status(StatusCodes.SERVER_ERROR)
+        .send({ message: err.message });
+    });
 };
