@@ -46,8 +46,9 @@ module.exports.deleteCard = (req, res) => {
       if (!result.deletedCount) {
         res.status(StatusCodes.NOT_FOUND)
           .send({ message: 'no such card' });
+        return;
       }
-      res.status(2000)
+      res.status(200)
         .send({ message: 'Card has been successfully deleted' });
     })
     .catch((err) => res.status(StatusCodes.SERVER_ERROR)
