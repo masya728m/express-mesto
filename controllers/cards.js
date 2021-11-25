@@ -48,7 +48,7 @@ module.exports.deleteCard = (req, res, next) => {
 
 module.exports.likeCard = (req, res, next) => {
   const { cardId } = req.params;
-  const { userId } = req.user;
+  const userId = req.user._id;
 
   if (!userId || !cardId) {
     next(new InvalidDataError('invalid data'));
