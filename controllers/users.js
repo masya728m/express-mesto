@@ -1,67 +1,75 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const StatusCodes = require('../utils/statusCodes');
+const InvalidDataError = require('../errors/invalidDataError');
+const NotFoundError = require('../errors/notFoundError');
 
-module.exports.getUsers = (req, res) => {
+const {
+  JWT_SECRET = 'dev-secret-key'
+} = process.env;
+
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send(users))
-    .catch((err) => res.status(StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch(next);
 };
 
-module.exports.getUser = (req, res) => {
-  const { id } = req.params;
+module.exports.getUser = (req, res, next) => {
+  const id = req.user._id;
   User.findById(id)
     .orFail(() => {
-      const error = new Error('Can not find user with required id');
-      error.statusCode = 404;
-      throw error;
+      throw NotFoundError('Can not find user with required id');
     })
     .then((user) => res.send(user))
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(StatusCodes.INVALID_DATA)
-          .send({ message: 'invalid data' });
-      }
-      if (err.statusCode === 404) {
-        res.status(404)
-          .send({ message: err.message });
-      }
-      res.status(StatusCodes.SERVER_ERROR)
-        .send({ message: err.message });
-    });
+    .catch(next);
 };
 
-module.exports.createUser = (req, res) => {
+module.exports.createUser = (req, res, next) => {
   const {
     name,
     about,
-    avatar
+    avatar,
+    email,
+    password
   } = req.body;
-  User.create({
-    name,
-    about,
-    avatar
-  })
-    .then((user) => res.send(user))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(StatusCodes.INVALID_DATA)
-          .send({ message: 'invalid data' });
-      }
-      res.status(StatusCodes.SERVER_ERROR)
-        .send({ message: err.message });
-    });
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash
+    })
+      .then((user) => res.send(user)))
+    .catch(next);
 };
 
-module.exports.updateUserProfile = (req, res) => {
+module.exports.login = (req, res, next) => {
+  const {
+    email,
+    password
+  } = req.body;
+
+  User.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign(
+        { _id: user._id },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      res.status(200)
+        .send({ token });
+    })
+    .catch(next);
+};
+
+module.exports.updateUserProfile = (req, res, next) => {
   const {
     name,
     about
   } = req.body;
   if (!name || !about) {
-    res.status(StatusCodes.INVALID_DATA)
-      .send({ message: 'invalid data' });
-    return;
+    throw new InvalidDataError('invalid data');
   }
   User.findByIdAndUpdate(req.user._id, {
     name,
@@ -71,40 +79,21 @@ module.exports.updateUserProfile = (req, res) => {
     runValidators: true
   })
     .then((user) => res.send(user))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(StatusCodes.INVALID_DATA)
-          .send({ message: 'invalid data' });
-      }
-      res.status(StatusCodes.SERVER_ERROR)
-        .send({ message: err.message });
-    });
+    .catch(next);
 };
 
-module.exports.updateUserAvatar = (req, res) => {
+module.exports.updateUserAvatar = (req, res, next) => {
   const { avatar } = req.body;
   if (!avatar) {
-    res.status(StatusCodes.INVALID_DATA)
-      .send({ message: 'invalid data' });
-    return;
+    throw new InvalidDataError('invalid data');
   }
-  User.findByIdAndUpdate(req.user._id, { avatar }, { new: true })
+  User.findByIdAndUpdate(req.user._id, { avatar }, {
+    new: true,
+    runValidators: true
+  })
     .orFail(() => {
-      const error = new Error('Can not find user with required id');
-      error.statusCode = 404;
-      throw error;
+      throw new NotFoundError('Can not find user with required id');
     })
     .then((user) => res.send(user))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(StatusCodes.INVALID_DATA)
-          .send({ message: 'invalid data' });
-      }
-      if (err.statusCode === 404) {
-        res.status(404)
-          .send({ message: err.message });
-      }
-      res.status(StatusCodes.SERVER_ERROR)
-        .send({ message: err.message });
-    });
+    .catch(next);
 };

@@ -1,22 +1,22 @@
 const Card = require('../models/card');
 const StatusCodes = require('../utils/statusCodes');
+const InvalidDataError = require('../errors/invalidDataError');
+const NotFoundError = require('../errors/notFoundError');
 
-module.exports.getCards = (req, res) => {
+module.exports.getCards = (req, res, next) => {
   Card.find({})
     .then((cards) => res.send(cards))
-    .catch((err) => res.status(StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch(next);
 };
 
-module.exports.createCard = (req, res) => {
+module.exports.createCard = (req, res, next) => {
   const owner = req.user._id;
   const {
     name,
     link
   } = req.body;
   if (!name || !link || !owner) {
-    res.status(StatusCodes.INVALID_DATA)
-      .send({ message: 'invalid data' });
+    next(new InvalidDataError('invalid data'));
     return;
   }
   Card.create({
@@ -25,17 +25,10 @@ module.exports.createCard = (req, res) => {
     owner
   })
     .then((card) => res.send(card))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(StatusCodes.INVALID_DATA)
-          .send({ message: 'invalid data' });
-      }
-      res.status(StatusCodes.SERVER_ERROR)
-        .send({ message: err.message });
-    });
+    .catch(next);
 };
 
-module.exports.deleteCard = (req, res) => {
+module.exports.deleteCard = (req, res, next) => {
   const { cardId } = req.params;
   const owner = req.user._id;
   Card.deleteOne({
@@ -44,25 +37,21 @@ module.exports.deleteCard = (req, res) => {
   })
     .then((result) => {
       if (!result.deletedCount) {
-        res.status(StatusCodes.NOT_FOUND)
-          .send({ message: 'no such card' });
+        next(new NotFoundError('no such card'));
         return;
       }
       res.status(200)
         .send({ message: 'Card has been successfully deleted' });
     })
-    .catch((err) => res.status(StatusCodes.SERVER_ERROR)
-      .send({ message: err.message }));
+    .catch(next);
 };
 
-module.exports.likeCard = (req, res) => {
+module.exports.likeCard = (req, res, next) => {
   const { cardId } = req.params;
   const { userId } = req.user;
 
   if (!userId || !cardId) {
-    res.status(StatusCodes.INVALID_DATA)
-      .send({ message: 'invalid data' });
-    return;
+    next(new InvalidDataError('invalid data'));
   }
   Card.findByIdAndUpdate(
     cardId,
@@ -70,28 +59,18 @@ module.exports.likeCard = (req, res) => {
     { new: true }
   )
     .orFail(() => {
-      const error = new Error('Can not find card with required id');
-      error.statusCode = 404;
-      throw error;
+      next(new NotFoundError('no such card'));
     })
     .then((card) => res.send(card))
-    .catch((err) => {
-      if (err.statusCode === 404) {
-        res.status(404)
-          .send({ message: err.message });
-      }
-      res.status(StatusCodes.SERVER_ERROR)
-        .send({ message: err.message });
-    });
+    .catch(next);
 };
 
-module.exports.dislikeCard = (req, res) => {
+module.exports.dislikeCard = (req, res, next) => {
   const { cardId } = req.params;
   const { userId } = req.user;
 
   if (!userId) {
-    res.status(StatusCodes.INVALID_DATA)
-      .send({ message: 'invalid data' });
+    next(new InvalidDataError('invalid data'));
     return;
   }
   if (!cardId) {
@@ -105,17 +84,8 @@ module.exports.dislikeCard = (req, res) => {
     { new: true }
   )
     .orFail(() => {
-      const error = new Error('Can not find card with required id');
-      error.statusCode = 404;
-      throw error;
+      next(new NotFoundError('no such card'));
     })
     .then((card) => res.send(card))
-    .catch((err) => {
-      if (err.statusCode === 404) {
-        res.status(404)
-          .send({ message: err.message });
-      }
-      res.status(StatusCodes.SERVER_ERROR)
-        .send({ message: err.message });
-    });
+    .catch(next);
 };
