@@ -67,7 +67,7 @@ module.exports.likeCard = (req, res, next) => {
 
 module.exports.dislikeCard = (req, res, next) => {
   const { cardId } = req.params;
-  const { userId } = req.user;
+  const userId = req.user._id;
 
   if (!userId) {
     next(new InvalidDataError('invalid data'));
