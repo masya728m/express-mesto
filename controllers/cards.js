@@ -2,6 +2,7 @@ const Card = require('../models/card');
 const StatusCodes = require('../utils/statusCodes');
 const InvalidDataError = require('../errors/invalidDataError');
 const NotFoundError = require('../errors/notFoundError');
+const ForbiddenError = require('../errors/forbiddenError');
 
 module.exports.getCards = (req, res, next) => {
   Card.find({})
@@ -31,17 +32,13 @@ module.exports.createCard = (req, res, next) => {
 module.exports.deleteCard = (req, res, next) => {
   const { cardId } = req.params;
   const owner = req.user._id;
-  Card.deleteOne({
-    _id: cardId,
-    owner
-  })
-    .then((result) => {
-      if (!result.deletedCount) {
-        next(new NotFoundError('no such card'));
-        return;
+  Card.findById(cardId)
+    .orFail(() => next(new NotFoundError('No such card')))
+    .then((card) => {
+      if (!card.owner.equals(owner)) {
+        return next(new ForbiddenError('Attempt to delete not your card'));
       }
-      res.status(200)
-        .send({ message: 'Card has been successfully deleted' });
+      return card.remove();
     })
     .catch(next);
 };

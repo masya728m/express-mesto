@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const ForbiddenError = require('../errors/forbiddenError');
+const UnauthorizedError = require('../errors/unauthorizedError');
 
 const {
   JWT_SECRET = 'dev-secret-key'
@@ -9,7 +9,7 @@ module.exports = (req, res, next) => {
   const { authorization } = req.headers;
 
   if (!authorization || !authorization.startsWith('Bearer ')) {
-    next(new ForbiddenError('Authorization required'));
+    next(new UnauthorizedError('Authorization required'));
     return;
   }
 
@@ -19,7 +19,7 @@ module.exports = (req, res, next) => {
   try {
     payload = jwt.verify(token, JWT_SECRET);
   } catch (err) {
-    next(new ForbiddenError('Authorization required'));
+    next(new UnauthorizedError('Authorization required'));
     return;
   }
 

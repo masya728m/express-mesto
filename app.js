@@ -2,13 +2,7 @@ require('dotenv')
   .config();
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const StatusCodes = require('./utils/statusCodes');
-const auth = require('./middlewares/auth');
-const {
-  login,
-  createUser
-} = require('./controllers/users');
+const NotFoundError = require('./errors/notFoundError');
 
 const {
   PORT = 3000,
@@ -17,41 +11,11 @@ const {
 
 const app = express();
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.post('/signin', login);
-app.post('/signup', createUser);
-app.use(auth);
-app.use('/cards', require('./routes/cards'));
-app.use('/users', require('./routes/users'));
+app.use(require('./routes/index'));
 
-app.use((req, res) => {
-  res.status(StatusCodes.NOT_FOUND)
-    .send({ message: 'not found' });
-});
+app.use((req, res, next) => next(new NotFoundError('not found')));
 
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  const reservedErrorNames = [
-    'ValidationError',
-    'MongoServerError',
-    'CastError'
-  ];
-  if (err.statusCode) {
-    return res.status(err.statusCode)
-      .send({ message: err.message });
-  }
-  if (reservedErrorNames.some((error) => error === err.name)) {
-    return res.status(StatusCodes.INVALID_DATA)
-      .send({ message: 'invalid data' });
-  }
-  if (err.name === 'MongoError' && err.code === 11000) {
-    return res.status(StatusCodes.FORBIDDEN)
-      .send({ message: 'Attempt to create duplicate entry' });
-  }
-  return res.status(StatusCodes.SERVER_ERROR)
-    .send(err.message);
-});
+app.use(require('./middlewares/error'));
 
 const options = {
   useNewUrlParser: true,

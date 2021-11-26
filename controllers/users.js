@@ -15,7 +15,7 @@ module.exports.getUsers = (req, res, next) => {
 };
 
 module.exports.getUser = (req, res, next) => {
-  const id = req.user._id;
+  const id = req.params.id || req.user._id;
   User.findById(id)
     .orFail(() => {
       throw NotFoundError('Can not find user with required id');
@@ -40,7 +40,14 @@ module.exports.createUser = (req, res, next) => {
       email,
       password: hash
     })
-      .then((user) => res.send(user)))
+      .then(() => res.send({
+        data: {
+          name,
+          about,
+          avatar,
+          email
+        }
+      })))
     .catch(next);
 };
 
