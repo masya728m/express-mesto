@@ -4,16 +4,26 @@ const {
   celebrate,
   Joi
 } = require('celebrate');
+const validator = require('validator');
 const {
   getUsers,
   getUser,
   updateUserProfile,
   updateUserAvatar
 } = require('../controllers/users');
+const InvalidDataError = require('../errors/invalidDataError');
 
 router.get('/', getUsers);
 router.get('/me', getUser);
-router.get('/:id', getUser);
+
+router.get('/:id', celebrate({
+  params: Joi.object()
+    .keys({
+      cardId: Joi.string()
+        .length(24)
+        .hex()
+    })
+}), getUser);
 router.patch('/me', celebrate({
   body: Joi.object()
     .keys({
@@ -31,7 +41,12 @@ router.patch('/me/avatar', celebrate({
     .keys({
       avatar: Joi.string()
         .required()
-        .uri()
+        .custom((value) => {
+          if (!validator.isURL(value, { require_protocol: true })) {
+            throw new InvalidDataError('Failed to validate avatar field');
+          }
+          return value;
+        })
     })
 }), updateUserAvatar);
 

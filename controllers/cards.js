@@ -1,5 +1,4 @@
 const Card = require('../models/card');
-const StatusCodes = require('../utils/statusCodes');
 const InvalidDataError = require('../errors/invalidDataError');
 const NotFoundError = require('../errors/notFoundError');
 const ForbiddenError = require('../errors/forbiddenError');
@@ -16,17 +15,18 @@ module.exports.createCard = (req, res, next) => {
     name,
     link
   } = req.body;
-  if (!name || !link || !owner) {
-    next(new InvalidDataError('invalid data'));
-    return;
-  }
   Card.create({
     name,
     link,
     owner
   })
     .then((card) => res.send(card))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new InvalidDataError('invalid data'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.deleteCard = (req, res, next) => {
@@ -47,10 +47,6 @@ module.exports.deleteCard = (req, res, next) => {
 module.exports.likeCard = (req, res, next) => {
   const { cardId } = req.params;
   const userId = req.user._id;
-
-  if (!userId || !cardId) {
-    next(new InvalidDataError('invalid data'));
-  }
   Card.findByIdAndUpdate(
     cardId,
     { $addToSet: { likes: userId } },
@@ -66,16 +62,6 @@ module.exports.likeCard = (req, res, next) => {
 module.exports.dislikeCard = (req, res, next) => {
   const { cardId } = req.params;
   const userId = req.user._id;
-
-  if (!userId) {
-    next(new InvalidDataError('invalid data'));
-    return;
-  }
-  if (!cardId) {
-    res.status(StatusCodes.NOT_FOUND)
-      .send({ message: 'invalid data' });
-    return;
-  }
   Card.findByIdAndUpdate(
     cardId,
     { $pull: { likes: userId } },

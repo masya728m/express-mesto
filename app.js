@@ -2,6 +2,7 @@ require('dotenv')
   .config();
 const express = require('express');
 const mongoose = require('mongoose');
+const { errors } = require('celebrate');
 const NotFoundError = require('./errors/notFoundError');
 
 const {
@@ -14,6 +15,8 @@ const app = express();
 app.use(require('./routes/index'));
 
 app.use((req, res, next) => next(new NotFoundError('not found')));
+
+app.use(errors());
 
 app.use(require('./middlewares/error'));
 

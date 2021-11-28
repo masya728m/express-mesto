@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const InvalidDataError = require('../errors/invalidDataError');
 const NotFoundError = require('../errors/notFoundError');
+const ConflictError = require('../errors/conflictError');
 
 const {
   JWT_SECRET = 'dev-secret-key'
@@ -48,7 +49,15 @@ module.exports.createUser = (req, res, next) => {
           email
         }
       })))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new InvalidDataError('Invalid data'));
+      }
+      if (err.code === 11000) {
+        return next(new ConflictError(`email ${email} already exists!`));
+      }
+      return next(err);
+    });
 };
 
 module.exports.login = (req, res, next) => {
@@ -75,9 +84,6 @@ module.exports.updateUserProfile = (req, res, next) => {
     name,
     about
   } = req.body;
-  if (!name || !about) {
-    throw new InvalidDataError('invalid data');
-  }
   User.findByIdAndUpdate(req.user._id, {
     name,
     about
@@ -86,7 +92,12 @@ module.exports.updateUserProfile = (req, res, next) => {
     runValidators: true
   })
     .then((user) => res.send(user))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new InvalidDataError('Invalid Data'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.updateUserAvatar = (req, res, next) => {
@@ -102,5 +113,10 @@ module.exports.updateUserAvatar = (req, res, next) => {
       throw new NotFoundError('Can not find user with required id');
     })
     .then((user) => res.send(user))
-    .catch(next);
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return next(new InvalidDataError('Invalid Data'));
+      }
+      return next(err);
+    });
 };

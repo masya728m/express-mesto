@@ -5,11 +5,13 @@ const {
   celebrate,
   Joi
 } = require('celebrate');
+const validator = require('validator');
 const {
   login,
   createUser
 } = require('../controllers/users');
 const auth = require('../middlewares/auth');
+const InvalidDataError = require('../errors/invalidDataError');
 
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: true }));
@@ -28,19 +30,22 @@ router.post('/signup', celebrate({
   body: Joi.object()
     .keys({
       name: Joi.string()
-        .required()
         .min(2)
         .max(30),
       about: Joi.string()
-        .required()
         .min(2)
         .max(50),
       avatar: Joi.string()
-        .required()
-        .uri(),
+        .uri()
+        .custom((value) => {
+          if (!validator.isURL(value, { require_protocol: true })) {
+            throw new InvalidDataError('Failed to validate avatar field');
+          }
+          return value;
+        }),
       email: Joi.string()
         .required()
-        .uri(),
+        .email(),
       password: Joi.string()
         .required()
         .min(7)
