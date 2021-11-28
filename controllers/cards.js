@@ -38,7 +38,8 @@ module.exports.deleteCard = (req, res, next) => {
       if (!card.owner.equals(owner)) {
         return next(new ForbiddenError('Attempt to delete not your card'));
       }
-      return card.remove();
+      return card.remove()
+        .then(() => res.send({ message: 'Card has been successfully deleted' }));
     })
     .catch(next);
 };

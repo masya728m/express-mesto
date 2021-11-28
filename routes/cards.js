@@ -1,6 +1,10 @@
 const router = require('express')
   .Router();
 const {
+  celebrate,
+  Joi
+} = require('celebrate');
+const {
   getCards,
   createCard,
   deleteCard,
@@ -10,7 +14,17 @@ const {
 
 router.get('/', getCards);
 router.delete('/:cardId', deleteCard);
-router.post('/', createCard);
+router.post('/', celebrate({
+  body: Joi.object()
+    .keys({
+      name: Joi.string()
+        .required()
+        .min(2),
+      link: Joi.string()
+        .required()
+        .uri()
+    })
+}), createCard);
 router.put('/:cardId/likes', likeCard);
 router.delete('/:cardId/likes', dislikeCard);
 
